@@ -1,0 +1,9 @@
+torch
+torchvision
+tensorflow
+netCDF4
+keras
+progressbar2
+torchsummary
+basemap
+colorama
