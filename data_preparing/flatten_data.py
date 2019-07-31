@@ -29,7 +29,7 @@ def get_paths(path):
     """
     return sorted(glob.glob(path), key=lambda x: x.split('/')[-1])
 
-def read_flat_file(var_path, var_name):
+def read_flat_file(var_path, var_name, f_type):
     """
     
 
@@ -46,7 +46,10 @@ def read_flat_file(var_path, var_name):
         DESCRIPTION.
 
     """
-    var_data = nc.Dataset(var_path).variables[var_name][:].data
+    if f_type:
+        var_data = nc.Dataset(var_path).variables[var_name][:].data
+    else:
+        var_data = np.load(var_path)
     _, nlat, nlon = var_data.shape
     return np.reshape(var_data, nlat*nlon)
 
@@ -64,19 +67,19 @@ def read_all_paths(input_path):
         list of list of paths.
 
     """
-    chl_paths = get_paths("{}/chl_*[0-9].nc".format(input_path))
-    sla_paths = get_paths("{}/sla_*[0-9].nc".format(input_path))
-    sst_paths = get_paths("{}/sst_*[0-9].nc".format(input_path))
-    sw_paths = get_paths("{}/sw_*[0-9].nc".format(input_path))
-    u_paths = get_paths("{}/u_*[0-9].nc".format(input_path))
-    v_paths = get_paths("{}/v_*[0-9].nc".format(input_path))
-    uera_paths = get_paths("{}/uera_*[0-9].nc".format(input_path))
-    vera_paths = get_paths("{}/vera_*[0-9].nc".format(input_path))
+    chl_paths = get_paths("{}/chl_*[0-9].*".format(input_path))
+    sla_paths = get_paths("{}/sla_*[0-9].*".format(input_path))
+    sst_paths = get_paths("{}/sst_*[0-9].*".format(input_path))
+    sw_paths = get_paths("{}/sw_*[0-9].*".format(input_path))
+    u_paths = get_paths("{}/u_*[0-9].*".format(input_path))
+    v_paths = get_paths("{}/v_*[0-9].*".format(input_path))
+    uera_paths = get_paths("{}/uera_*[0-9].*".format(input_path))
+    vera_paths = get_paths("{}/vera_*[0-9].*".format(input_path))
     paths = [chl_paths, sla_paths, sst_paths, sw_paths, u_paths,
             v_paths, uera_paths, vera_paths]
     return paths
 
-def transform_nc(input_path, parmcols, start_y, end_y):
+def transform_nc(input_path, parmcols, start_y, end_y, f_type):
     """
     Read nc files and transform them to pandas dataframe
 
@@ -105,14 +108,14 @@ def transform_nc(input_path, parmcols, start_y, end_y):
         year_data = (t // 12) + start_y * np.ones(lats_data.shape[0])
         mon_1_data = np.sin(2*np.pi*(t%12)/12) * np.ones(lats_data.shape[0])
         mon_2_data = np.cos(2*np.pi*(t%12)/12) * np.ones(lats_data.shape[0])
-        chl_data = read_flat_file(paths[0][t], 'chl')
-        sla_data = read_flat_file(paths[1][t], 'sla')
-        sst_data = read_flat_file(paths[2][t], 'sst')
-        sw_data = read_flat_file(paths[3][t], 'sw')
-        u_data = read_flat_file(paths[4][t], 'u')
-        v_data = read_flat_file(paths[5][t], 'v')
-        uera_data = read_flat_file(paths[6][t], 'uera')
-        vera_data = read_flat_file(paths[7][t], 'vera')
+        chl_data = read_flat_file(paths[0][t], 'chl', f_type)
+        sla_data = read_flat_file(paths[1][t], 'sla', f_type)
+        sst_data = read_flat_file(paths[2][t], 'sst', f_type)
+        sw_data = read_flat_file(paths[3][t], 'sw', f_type)
+        u_data = read_flat_file(paths[4][t], 'u', f_type)
+        v_data = read_flat_file(paths[5][t], 'v', f_type)
+        uera_data = read_flat_file(paths[6][t], 'uera', f_type)
+        vera_data = read_flat_file(paths[7][t], 'vera', f_type)
         t_data = [chl_data, lats_data, year_data, sla_data, sst_data, uera_data,
                   vera_data, u_data, v_data, sw_data, lon_1_data, lon_2_data,
                   mon_1_data, mon_2_data]
@@ -133,6 +136,7 @@ def get_args():
     parser.add_argument('-o', '--output', help='path for output csv file')
     parser.add_argument('--start-year', default=1998, help='starting year of the data')
     parser.add_argument('--end-year', default=2015, help='ending year of the data')
+    parser.add_argument('--ftype', default=0, help='0 if netcdf files; 1 if npy files')
     args = parser.parse_args()
     return  args
 
@@ -149,7 +153,8 @@ def main():
                "v", "sw", "lon_1", "lon_2", "mon_1", "mon_2"]
     start_y = args.start_year
     end_y = args.end_year
-    out_data = transform_nc(args.input, parmcol, start_y, end_y)
+    f_type = args.ftype
+    out_data = transform_nc(args.input, parmcol, start_y, end_y, f_type)
     print("Saving file {}".format(args.output))
     out_data.to_csv(args.output)
 
