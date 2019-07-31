@@ -27,4 +27,3 @@ models/scalers/
 models/pytorch_models/
 models/model_catboost
 *.ipynb
-
